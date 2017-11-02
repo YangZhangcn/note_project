@@ -21,6 +21,7 @@ import com.zhangyang.charpter2.book.BookService;
 import com.zhangyang.charpter2.book.BookService1;
 import com.zhangyang.charpter2.book.BookService2;
 import com.zhangyang.charpter2.book.IBookManager;
+import com.zhangyang.charpter2.book.IOnNewBookArrivedListener;
 import com.zhangyang.charpter2.book.MyBookManager;
 import com.zhangyang.charpter2.utils.Constants;
 
@@ -51,6 +52,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
             Log.d("MainActivity", "onServiceConnected");
             bookManager = IBookManager.Stub.asInterface(iBinder);
+            try {
+                bookManager.registerListener(listener);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
         }
 
         @Override
@@ -111,6 +117,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     };
 
+    private IOnNewBookArrivedListener.Stub listener = new IOnNewBookArrivedListener.Stub() {
+        @Override
+        public void onNewBookArrived(Book book) throws RemoteException {
+            Log.d("onNewBookArrived",book.bookName+book.bookId);
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -126,14 +139,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         tvInfo1 = (TextView) findViewById(R.id.tv_info_1);
         btnAdd1.setOnClickListener(this);
         btnShow1.setOnClickListener(this);
-        bindService(new Intent(this, BookService.class), conn, BIND_AUTO_CREATE);
-        bindService(new Intent(this, BookService1.class), conn1, BIND_AUTO_CREATE);
-        bindService(new Intent(this, BookService2.class), msgConn, BIND_AUTO_CREATE);
+//        bindService(new Intent(this, BookService.class), conn, BIND_AUTO_CREATE);
+//        bindService(new Intent(this, BookService1.class), conn1, BIND_AUTO_CREATE);
+//        bindService(new Intent(this, BookService2.class), msgConn, BIND_AUTO_CREATE);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        try {
+            bookManager.unRegisterListener(listener);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
         unbindService(conn);
         unbindService(conn1);
         unbindService(msgConn);
@@ -144,14 +162,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         switch (view.getId()) {
             case R.id.btn_add_book:
                 try {
-                    bookManager.addBook(new Book(i, "bookName"));
-                    i++;
+                    if (bookManager != null){
+                        bookManager.addBook(new Book(i, "bookName"));
+                        i++;
+                    }
                 } catch (RemoteException e) {
                     e.printStackTrace();
                 }
                 break;
             case R.id.btn_show_book:
                 try {
+                    if (bookManager == null) return;
                     List<Book> bookList = bookManager.getBookList();
                     StringBuilder sb = new StringBuilder();
                     for (Book book : bookList) {
@@ -164,6 +185,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.btn_add_book_1:
                 try {
+                    if (myBookManager == null) return;
                     myBookManager.addBook(new Book(i, "bookName"));
                     j++;
                 } catch (RemoteException e) {
@@ -172,6 +194,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.btn_show_book_1:
                 try {
+                    if (myBookManager == null )return;
                     List<Book> bookList = myBookManager.getBooks();
                     StringBuilder sb = new StringBuilder();
                     for (Book book : bookList) {

@@ -3,6 +3,7 @@ package com.zhangyang.charpter2.book;
 import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
+import android.os.RemoteCallbackList;
 import android.os.RemoteException;
 import android.support.annotation.Nullable;
 
@@ -17,16 +18,34 @@ public class BookService extends Service {
 
     private ArrayList<Book> books = new ArrayList<>();
 
+    private RemoteCallbackList<IOnNewBookArrivedListener> listeners = new RemoteCallbackList<>();
+
     IBookManager.Stub mBinder = new IBookManager.Stub(){
 
         @Override
         public void addBook(Book book) throws RemoteException {
             books.add(book);
+            final int n = listeners.beginBroadcast();
+            for (int i = 0; i< n; i++){
+                IOnNewBookArrivedListener broadcastItem = listeners.getBroadcastItem(i);
+                broadcastItem.onNewBookArrived(book);
+            }
+            listeners.finishBroadcast();
         }
 
         @Override
         public List<Book> getBookList() throws RemoteException {
             return books;
+        }
+
+        @Override
+        public void registerListener(IOnNewBookArrivedListener listener) throws RemoteException {
+            listeners.register(listener);
+        }
+
+        @Override
+        public void unRegisterListener(IOnNewBookArrivedListener listener) throws RemoteException {
+            listeners.unregister(listener);
         }
     };
 
